@@ -17,3 +17,4 @@ venv/
 # Raw/large datasets - not committed, documented in README instead
 data/raw/
 data/processed/
+error.log
