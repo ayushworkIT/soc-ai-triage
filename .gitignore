@@ -13,3 +13,7 @@ venv/
 
 # OS junk
 .DS_Store
+
+# Raw/large datasets - not committed, documented in README instead
+data/raw/
+data/processed/
