@@ -29,6 +29,10 @@ def clean_chunk(df: pd.DataFrame, row_offset: int) -> pd.DataFrame:
     df[numeric_cols] = df[numeric_cols].replace([np.inf, -np.inf], np.nan)
     df[numeric_cols] = df[numeric_cols].fillna(0)
 
+    # Drop rows with a physically impossible negative Flow Duration
+    # (a known CICIDS2017 capture artifact affecting a small number of rows)
+    df = df[df["Flow Duration"] >= 0]
+
     df["Label"] = df["Label"].str.strip()
     df["is_attack"] = (df["Label"] != "BENIGN").astype(int)
 
