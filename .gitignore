@@ -18,3 +18,4 @@ venv/
 data/raw/
 data/processed/
 error.log
+mitre/enterprise-attack.json
