@@ -1,0 +1,42 @@
+{
+  "detection": {
+    "total_candidate_flows": 17029,
+    "total_actual_attacks": 13834,
+    "true_positive_flows": 13725,
+    "false_positive_flows": 2,
+    "precision": 0.9999,
+    "recall": 0.9921
+  },
+  "alert_reduction": {
+    "total_flagged_flows": 13727,
+    "total_alerts": 7,
+    "alert_reduction_pct": 99.95
+  },
+  "correlation": {
+    "total_alerts": 7,
+    "total_incidents": 3,
+    "alert_to_incident_reduction_pct": 57.14,
+    "incidents_with_multiple_alerts": 2
+  },
+  "llm_performance": {
+    "total_incidents_analyzed": 3,
+    "severity_agreement_count": 2,
+    "severity_agreement_rate": 0.6667,
+    "hallucination_count": 2,
+    "hallucination_rate": 0.6667,
+    "false_positive_likelihood_by_incident": [
+      {
+        "incident_title": "Coordinated FTP brute-force activity (3 sources)",
+        "false_positive_likelihood": "Low"
+      },
+      {
+        "incident_title": "Isolated SSH brute-force activity (1 source)",
+        "false_positive_likelihood": "High"
+      },
+      {
+        "incident_title": "Coordinated SSH brute-force activity (3 sources)",
+        "false_positive_likelihood": "Low"
+      }
+    ]
+  }
+}
