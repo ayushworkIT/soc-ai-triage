@@ -2,9 +2,15 @@
 mitre_lookup.py
 
 Purpose: Load the full MITRE ATT&CK Enterprise dataset once, extract
-a clean technique_id -> {name, description} lookup table, and provide
-a validation function to check whether an LLM-claimed technique ID
-and name actually match the official MITRE reference data.
+a clean technique_id -> {name, description, parent_name, combined_name}
+lookup table, and provide a validation function to check whether an
+LLM-claimed technique ID and name actually match official MITRE data.
+
+Checks the claimed name against BOTH the bare official name (e.g. "SSH")
+AND the common "Parent: Sub-technique" display convention (e.g.
+"Remote Services: SSH") used by tools like ATT&CK Navigator - so a
+correct answer in either format is accepted, and only genuine
+mismatches are flagged.
 """
 
 import json
@@ -16,7 +22,6 @@ _technique_cache = None
 
 
 def load_techniques() -> dict:
-    """Load and cache a technique_id -> {name, description} lookup table."""
     global _technique_cache
     if _technique_cache is not None:
         return _technique_cache
@@ -24,14 +29,13 @@ def load_techniques() -> dict:
     with open(MITRE_DATA_PATH) as f:
         data = json.load(f)
 
-    techniques = {}
+    raw_techniques = {}
     for obj in data["objects"]:
         if obj.get("type") != "attack-pattern":
             continue
         if obj.get("revoked") or obj.get("x_mitre_deprecated"):
             continue
 
-        # Technique ID lives inside external_references, marked as mitre-attack source
         technique_id = None
         for ref in obj.get("external_references", []):
             if ref.get("source_name") == "mitre-attack":
@@ -41,9 +45,26 @@ def load_techniques() -> dict:
         if technique_id is None:
             continue
 
-        techniques[technique_id] = {
+        raw_techniques[technique_id] = {
             "name": obj.get("name", ""),
-            "description": obj.get("description", "")[:300],  # trimmed
+            "description": obj.get("description", "")[:300],
+        }
+
+    # Second pass: build combined "Parent: Sub-technique" names for
+    # any sub-technique (ID containing a dot, e.g. T1021.004)
+    techniques = {}
+    for tech_id, info in raw_techniques.items():
+        if "." in tech_id:
+            parent_id = tech_id.split(".")[0]
+            parent_name = raw_techniques.get(parent_id, {}).get("name", "")
+            combined_name = f"{parent_name}: {info['name']}" if parent_name else info["name"]
+        else:
+            combined_name = info["name"]
+
+        techniques[tech_id] = {
+            "name": info["name"],
+            "combined_name": combined_name,
+            "description": info["description"],
         }
 
     _technique_cache = techniques
@@ -53,10 +74,8 @@ def load_techniques() -> dict:
 def validate_technique(technique_id: str, claimed_name: str) -> dict:
     """
     Check whether a technique_id exists in MITRE ATT&CK, and whether the
-    claimed name matches the official name.
-
-    Returns a dict describing validation result - used to catch LLM
-    hallucinations like inventing a technique_id or mismatching a name.
+    claimed name matches EITHER the bare official name or the
+    'Parent: Sub-technique' display convention.
     """
     techniques = load_techniques()
 
@@ -69,13 +88,19 @@ def validate_technique(technique_id: str, claimed_name: str) -> dict:
         }
 
     official_name = techniques[technique_id]["name"]
-    name_matches = claimed_name.strip().lower() == official_name.strip().lower()
+    combined_name = techniques[technique_id]["combined_name"]
+    claimed_normalized = claimed_name.strip().lower()
+
+    name_matches = (
+        claimed_normalized == official_name.strip().lower()
+        or claimed_normalized == combined_name.strip().lower()
+    )
 
     return {
         "valid_id": True,
         "name_matches": name_matches,
         "official_name": official_name,
-        "note": "OK" if name_matches else f"Name mismatch: LLM said '{claimed_name}', official name is '{official_name}'.",
+        "note": "OK" if name_matches else f"Name mismatch: LLM said '{claimed_name}', official name is '{official_name}' (or '{combined_name}').",
     }
 
 
@@ -84,11 +109,12 @@ if __name__ == "__main__":
     techniques = load_techniques()
     print(f"Loaded {len(techniques)} techniques.\n")
 
-    # Test against the two techniques the LLM returned in Step 16
     test_cases = [
         ("T1110", "Brute Force"),
-        ("T1021.001", "Remote Services: SSH"),
-        ("T9999", "Fake Technique"),  # deliberately invalid, to test the failure path
+        ("T1021.004", "Remote Services: SSH"),
+        ("T1021.004", "Remote System Discovery"),
+        ("T1595.003", "Active Scanning: Brute Force"),
+        ("T9999", "Fake Technique"),
     ]
 
     for tech_id, claimed_name in test_cases:
