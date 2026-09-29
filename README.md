@@ -7,6 +7,30 @@ mapping, and severity review - not as the detection mechanism itself.
 
 ## Architecture
 
+```
+Raw Logs (CICIDS2017 dataset)
+      |
+Log Ingestion (chunked CSV -> SQLite)
+      |
+Parsing / Normalization (clean types, handle inf/NaN, simulate source IPs)
+      |
+Detection Rules (volumetric, time-windowed brute-force detection)
+      |
+Alert Generation (structured Alert records, severity from real data quartiles)
+      |
+Alert Enrichment (service names, duration, attempt rate, readable descriptions)
+      |
+Alert Correlation (time-overlap grouping via union-find)
+      |
+Incident Creation (aggregated Incident records)
+      |
+LLM-Assisted Analysis (Claude Haiku, strict JSON schema)
+      |
+MITRE ATT&CK Validation (checked against official MITRE reference data)
+      |
+Dashboard (Streamlit) + Evaluation Report (JSON)
+```
+
 
 ## Why an LLM, and why this architecture
 
