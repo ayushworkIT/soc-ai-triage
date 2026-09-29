@@ -7,6 +7,7 @@ mapping, and severity review - not as the detection mechanism itself.
 
 ## Architecture
 
+
 ## Why an LLM, and why this architecture
 
 The LLM is used only as an interpretation layer on top of already-detected,
